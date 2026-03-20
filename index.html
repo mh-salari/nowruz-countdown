@@ -198,7 +198,6 @@
 
   // --- Audio ---
   var audioUnlocked = false;
-  var cannonSound = new Audio('sounds/cannon.mp3');
   var happyNewYearSound = new Audio('sounds/happy-new-year.mp3');
   var celebrationSound = new Audio('sounds/celebration.mp3');
   var numberFiles = {
@@ -209,7 +208,6 @@
     1: new Audio('sounds/ms/1.mp3')
   };
 
-  cannonSound.preload = 'auto';
   happyNewYearSound.preload = 'auto';
   celebrationSound.preload = 'auto';
   for (var k in numberFiles) numberFiles[k].preload = 'auto';
@@ -224,7 +222,7 @@
     src.connect(ctx.destination);
     src.start(0);
     // Also touch each audio element to allow future playback
-    var allSounds = [cannonSound, happyNewYearSound, celebrationSound];
+    var allSounds = [happyNewYearSound, celebrationSound];
     for (var k in numberFiles) allSounds.push(numberFiles[k]);
     allSounds.forEach(function(s) { s.load(); });
     audioUnlocked = true;
@@ -238,12 +236,6 @@
     if (!audioUnlocked || !numberFiles[n]) return;
     numberFiles[n].currentTime = 0;
     numberFiles[n].play().catch(function() {});
-  }
-
-  function playCannon() {
-    if (!audioUnlocked) return;
-    var s = cannonSound.cloneNode();
-    s.play().catch(function() {});
   }
 
   // --- Tahvil time ---
@@ -303,22 +295,17 @@
     $message.style.display = 'block';
     showTahvilTime();
     startFireworks(8000);
-    // Cannon 3 times
-    playCannon();
-    setTimeout(playCannon, 600);
-    setTimeout(playCannon, 1200);
-    // Happy new year voice after cannons
-    setTimeout(function() {
-      if (!audioUnlocked) return;
+    // Happy new year voice
+    if (audioUnlocked) {
       happyNewYearSound.currentTime = 0;
       happyNewYearSound.play().catch(function() {});
-    }, 1500);
+    }
     // Celebration music after happy new year voice
     setTimeout(function() {
       if (!audioUnlocked) return;
       celebrationSound.currentTime = 0;
       celebrationSound.play().catch(function() {});
-    }, 3500);
+    }, 2000);
   }
 
   function tick() {
