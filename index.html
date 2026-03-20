@@ -91,7 +91,7 @@
 
 <script>
 (function() {
-  var TARGET = new Date('2026-03-20T11:42:48Z').getTime(); // TEST: 2.5min from now. Real: 2026-03-20T14:46:00Z
+  var TARGET = new Date('2026-03-20T11:47:30Z').getTime(); // TEST: 2.5min from now. Real: 2026-03-20T14:46:00Z
   var $countdown = document.getElementById('countdown');
   var $tahvil = document.getElementById('tahvil');
   var $main = document.getElementById('main');
@@ -162,7 +162,8 @@
       var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (tz) tzLabel = tz.replace(/_/g, ' ');
     } catch(e) {}
-    return 'تحویل سال ۱۴۰۵: ' + toFarsi(hh + ':' + mm) + ' به وقت ' + tzLabel;
+    var ss = String(d.getSeconds()).padStart(2, '0');
+    return 'لحظه تحویل سال ۱۴۰۵ ' + toFarsi(hh) + ' و ' + toFarsi(mm) + ' دقیقه و ' + toFarsi(ss) + ' ثانیه به وقت ' + tzLabel;
   }
 
   $tahvil.textContent = formatTahvil();
@@ -208,13 +209,14 @@
     var seconds = totalSec % 60;
     $countdown.textContent = toFarsi(pad2(days) + ':' + pad2(hours) + ':' + pad2(minutes) + ':' + pad2(seconds));
 
-    // Final 5 seconds: full-screen overlay with Farsi number + spoken number
-    if (totalSec <= 5 && totalSec >= 1 && totalSec !== lastFinalSec) {
-      lastFinalSec = totalSec;
-      $overlay.textContent = toFarsi(String(totalSec));
+    // Final 5 seconds: full-screen overlay stays visible, only number changes
+    if (totalSec <= 5 && totalSec >= 1) {
       $overlay.classList.add('visible');
-      playNumber(totalSec);
-      setTimeout(function() { $overlay.classList.remove('visible'); }, 700);
+      if (totalSec !== lastFinalSec) {
+        lastFinalSec = totalSec;
+        $overlay.textContent = toFarsi(String(totalSec));
+        playNumber(totalSec);
+      }
     }
   }
 
