@@ -109,22 +109,42 @@
   var audioUnlocked = false;
   var cannonSound = new Audio('sounds/cannon.mp3');
   var celebrationSound = new Audio('sounds/celebration.mp3');
-  var numberSounds = {
+  var numberFiles = {
     5: new Audio('sounds/five.mp3'),
     4: new Audio('sounds/four.mp3'),
     3: new Audio('sounds/three.mp3'),
     2: new Audio('sounds/two.mp3'),
     1: new Audio('sounds/one.mp3')
   };
+  var numberWords = { 5: 'پنج', 4: 'چهار', 3: 'سه', 2: 'دو', 1: 'یک' };
 
   cannonSound.preload = 'auto';
   celebrationSound.preload = 'auto';
-  for (var k in numberSounds) numberSounds[k].preload = 'auto';
+  for (var k in numberFiles) numberFiles[k].preload = 'auto';
+
+  // Check if browser has a Persian speech synthesis voice
+  var hasFarsiVoice = false;
+  var farsiVoice = null;
+  function findFarsiVoice() {
+    if (!window.speechSynthesis) return;
+    var voices = speechSynthesis.getVoices();
+    for (var i = 0; i < voices.length; i++) {
+      if (voices[i].lang && voices[i].lang.indexOf('fa') === 0) {
+        hasFarsiVoice = true;
+        farsiVoice = voices[i];
+        break;
+      }
+    }
+  }
+  findFarsiVoice();
+  if (window.speechSynthesis && speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = findFarsiVoice;
+  }
 
   function unlockAudio() {
     if (audioUnlocked) return;
     var allSounds = [cannonSound, celebrationSound];
-    for (var k in numberSounds) allSounds.push(numberSounds[k]);
+    for (var k in numberFiles) allSounds.push(numberFiles[k]);
     allSounds.forEach(function(s) {
       s.play().then(function() { s.pause(); s.currentTime = 0; }).catch(function() {});
     });
@@ -136,9 +156,20 @@
   document.addEventListener('touchstart', unlockAudio, { once: false });
 
   function playNumber(n) {
-    if (!audioUnlocked || !numberSounds[n]) return;
-    numberSounds[n].currentTime = 0;
-    numberSounds[n].play().catch(function() {});
+    if (!audioUnlocked) return;
+    // Prefer device's native TTS if a Persian voice is available
+    if (hasFarsiVoice && window.speechSynthesis) {
+      var utt = new SpeechSynthesisUtterance(numberWords[n]);
+      utt.lang = 'fa-IR';
+      if (farsiVoice) utt.voice = farsiVoice;
+      utt.rate = 1;
+      utt.volume = 1;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utt);
+    } else if (numberFiles[n]) {
+      numberFiles[n].currentTime = 0;
+      numberFiles[n].play().catch(function() {});
+    }
   }
 
   function playCannon() {
