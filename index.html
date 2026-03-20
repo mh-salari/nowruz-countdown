@@ -360,7 +360,16 @@
     } else {
       tick();
       setInterval(tick, 200);
-      setInterval(function() { if (!finished) syncTime(); }, 10000);
+      setInterval(function() {
+        if (finished) return;
+        var secsLeft = Math.ceil((TARGET - now()) / 1000);
+        if (secsLeft <= 600) syncTime(); // every 10s in last 10 min
+      }, 10000);
+      setInterval(function() {
+        if (finished) return;
+        var secsLeft = Math.ceil((TARGET - now()) / 1000);
+        if (secsLeft > 600) syncTime(); // every 60s before that
+      }, 60000);
     }
   }
   syncTime(start);
