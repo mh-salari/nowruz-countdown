@@ -102,7 +102,7 @@
 
 <script>
 (function() {
-  var TARGET = new Date('2026-03-20T12:35:17Z').getTime(); // TEST. Real: 2026-03-20T14:45:59Z
+  var TARGET = new Date('2026-03-20T12:39:22Z').getTime(); // TEST. Real: 2026-03-20T14:45:59Z
   var $countdown = document.getElementById('countdown');
   var $tahvil = document.getElementById('tahvil');
   var $main = document.getElementById('main');
@@ -216,13 +216,17 @@
 
   function unlockAudio() {
     if (audioUnlocked) return;
+    // Use AudioContext to unlock audio on iOS/Safari without playing actual sounds
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var buf = ctx.createBuffer(1, 1, 22050);
+    var src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+    // Also touch each audio element to allow future playback
     var allSounds = [cannonSound, happyNewYearSound, celebrationSound];
     for (var k in numberFiles) allSounds.push(numberFiles[k]);
-    allSounds.forEach(function(s) {
-      var origVol = s.volume;
-      s.volume = 0;
-      s.play().then(function() { s.pause(); s.currentTime = 0; s.volume = origVol; }).catch(function() { s.volume = origVol; });
-    });
+    allSounds.forEach(function(s) { s.load(); });
     audioUnlocked = true;
     $audioPrompt.classList.add('hidden');
   }
@@ -264,9 +268,10 @@
   $tahvil.textContent = formatTahvil();
 
   // --- Time sync ---
-  var timeOffset = 0; // ms difference: server - local
+  var timeOffset = 0;
+  var synced = false;
 
-  function syncTime() {
+  function syncTime(cb) {
     var localBefore = Date.now();
     fetch('https://worldtimeapi.org/api/timezone/Etc/UTC')
       .then(function(r) { return r.json(); })
@@ -275,10 +280,11 @@
         var roundTrip = localAfter - localBefore;
         var serverTime = new Date(data.utc_datetime).getTime();
         timeOffset = serverTime - localBefore - Math.round(roundTrip / 2);
+        synced = true;
+        if (cb) cb();
       })
-      .catch(function() { timeOffset = 0; });
+      .catch(function() { synced = true; if (cb) cb(); });
   }
-  syncTime();
 
   function now() { return Date.now() + timeOffset; }
 
@@ -345,17 +351,20 @@
     }
   }
 
-  // Initial check
-  if (now() >= TARGET) {
-    finished = true;
-    $main.style.display = 'none';
-    $message.style.display = 'block';
-    showTahvilTime();
-    $audioPrompt.classList.add('hidden');
-  } else {
-    tick();
-    setInterval(tick, 200);
+  // Sync time first, then start countdown
+  function start() {
+    if (now() >= TARGET) {
+      finished = true;
+      $main.style.display = 'none';
+      $message.style.display = 'block';
+      showTahvilTime();
+      $audioPrompt.classList.add('hidden');
+    } else {
+      tick();
+      setInterval(tick, 200);
+    }
   }
+  syncTime(start);
 })();
 </script>
 </body>
