@@ -51,13 +51,14 @@
     align-items: center;
     justify-content: center;
     font-family: 'Courier New', Courier, monospace;
-    font-size: clamp(8rem, 30vw, 20rem);
+    font-size: clamp(10rem, 40vw, 25rem);
     font-weight: 900;
     color: #111;
+    background: #fff;
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.15s;
-    direction: ltr;
+    z-index: 10;
   }
   #overlay.visible { opacity: 1; }
   #message {
@@ -90,29 +91,41 @@
 
 <script>
 (function() {
-  const TARGET = new Date('2026-03-20T11:26:13Z').getTime(); // TEST: 5min from now. Real: 2026-03-20T14:46:00Z
-  const $countdown = document.getElementById('countdown');
-  const $tahvil = document.getElementById('tahvil');
-  const $main = document.getElementById('main');
-  const $message = document.getElementById('message');
-  const $overlay = document.getElementById('overlay');
-  const $audioPrompt = document.getElementById('audio-prompt');
+  var TARGET = new Date('2026-03-20T11:42:00Z').getTime(); // TEST: ~5min from now. Real: 2026-03-20T14:46:00Z
+  var $countdown = document.getElementById('countdown');
+  var $tahvil = document.getElementById('tahvil');
+  var $main = document.getElementById('main');
+  var $message = document.getElementById('message');
+  var $overlay = document.getElementById('overlay');
+  var $audioPrompt = document.getElementById('audio-prompt');
 
-  // --- Audio (MP3 files) ---
+  var FARSI = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+
+  function toFarsi(str) {
+    return String(str).replace(/\d/g, function(d) { return FARSI[d]; });
+  }
+
+  // --- Audio ---
   var audioUnlocked = false;
-  var tickSound = new Audio('sounds/tick.mp3');
   var cannonSound = new Audio('sounds/cannon.mp3');
   var celebrationSound = new Audio('sounds/celebration.mp3');
+  var numberSounds = {
+    5: new Audio('sounds/five.mp3'),
+    4: new Audio('sounds/four.mp3'),
+    3: new Audio('sounds/three.mp3'),
+    2: new Audio('sounds/two.mp3'),
+    1: new Audio('sounds/one.mp3')
+  };
 
-  // Preload
-  tickSound.preload = 'auto';
   cannonSound.preload = 'auto';
   celebrationSound.preload = 'auto';
+  for (var k in numberSounds) numberSounds[k].preload = 'auto';
 
   function unlockAudio() {
     if (audioUnlocked) return;
-    // Play and immediately pause to unlock audio on mobile
-    [tickSound, cannonSound, celebrationSound].forEach(function(s) {
+    var allSounds = [cannonSound, celebrationSound];
+    for (var k in numberSounds) allSounds.push(numberSounds[k]);
+    allSounds.forEach(function(s) {
       s.play().then(function() { s.pause(); s.currentTime = 0; }).catch(function() {});
     });
     audioUnlocked = true;
@@ -122,47 +135,34 @@
   document.addEventListener('click', unlockAudio, { once: false });
   document.addEventListener('touchstart', unlockAudio, { once: false });
 
-  function playTick() {
-    if (!audioUnlocked) return;
-    tickSound.currentTime = 0;
-    tickSound.play().catch(function() {});
+  function playNumber(n) {
+    if (!audioUnlocked || !numberSounds[n]) return;
+    numberSounds[n].currentTime = 0;
+    numberSounds[n].play().catch(function() {});
   }
 
   function playCannon() {
     if (!audioUnlocked) return;
-    cannonSound.currentTime = 0;
-    cannonSound.play().catch(function() {});
-  }
-
-  function playCelebration() {
-    if (!audioUnlocked) return;
-    celebrationSound.currentTime = 0;
-    celebrationSound.play().catch(function() {});
+    var s = cannonSound.cloneNode();
+    s.play().catch(function() {});
   }
 
   // --- Tahvil time ---
-  function toPersianDigits(str) {
-    return String(str).replace(/\d/g, function(d) {
-      return String.fromCharCode(0x06F0 + Number(d));
-    });
-  }
-
   function formatTahvil() {
     var d = new Date(TARGET);
     var offset = -d.getTimezoneOffset();
+    var sign = offset >= 0 ? '+' : '-';
     var absOff = Math.abs(offset);
     var offH = Math.floor(absOff / 60);
     var offM = absOff % 60;
-    var sign = offset >= 0 ? '+' : '-';
     var hh = String(d.getHours()).padStart(2, '0');
     var mm = String(d.getMinutes()).padStart(2, '0');
     var tzLabel = 'UTC' + sign + offH + (offM ? ':' + String(offM).padStart(2, '0') : '');
-    // Try to get a nice tz name
     try {
       var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (tz) tzLabel = tz.replace(/_/g, ' ');
     } catch(e) {}
-    return 'تحویل سال ۱۴۰۵: ' + toPersianDigits(hh + ':' + mm) + ' به وقت ' + tzLabel;
+    return 'تحویل سال ۱۴۰۵: ' + toFarsi(hh + ':' + mm) + ' به وقت ' + tzLabel;
   }
 
   $tahvil.textContent = formatTahvil();
@@ -173,6 +173,23 @@
 
   function pad2(n) { return n < 10 ? '0' + n : String(n); }
 
+  function celebrate() {
+    $main.style.display = 'none';
+    $overlay.classList.remove('visible');
+    $overlay.textContent = '';
+    $message.style.display = 'block';
+    // Cannon 3 times
+    playCannon();
+    setTimeout(playCannon, 600);
+    setTimeout(playCannon, 1200);
+    // Wait 1.5s then play celebration MP3
+    setTimeout(function() {
+      if (!audioUnlocked) return;
+      celebrationSound.currentTime = 0;
+      celebrationSound.play().catch(function() {});
+    }, 2000);
+  }
+
   function tick() {
     if (finished) return;
     var now = Date.now();
@@ -180,12 +197,7 @@
 
     if (diff <= 0) {
       finished = true;
-      $main.style.display = 'none';
-      $overlay.classList.remove('visible');
-      $overlay.textContent = '';
-      $message.style.display = 'block';
-      playCannon();
-      setTimeout(playCelebration, 500);
+      celebrate();
       return;
     }
 
@@ -194,19 +206,19 @@
     var hours = Math.floor((totalSec % 86400) / 3600);
     var minutes = Math.floor((totalSec % 3600) / 60);
     var seconds = totalSec % 60;
-    $countdown.textContent = pad2(days) + ':' + pad2(hours) + ':' + pad2(minutes) + ':' + pad2(seconds);
+    $countdown.textContent = toFarsi(pad2(days) + ':' + pad2(hours) + ':' + pad2(minutes) + ':' + pad2(seconds));
 
-    // Final 5 seconds overlay
+    // Final 5 seconds: full-screen overlay with Farsi number + spoken number
     if (totalSec <= 5 && totalSec >= 1 && totalSec !== lastFinalSec) {
       lastFinalSec = totalSec;
-      $overlay.textContent = totalSec;
+      $overlay.textContent = toFarsi(String(totalSec));
       $overlay.classList.add('visible');
-      playTick();
+      playNumber(totalSec);
       setTimeout(function() { $overlay.classList.remove('visible'); }, 700);
     }
   }
 
-  // Initial check — if already past
+  // Initial check
   if (Date.now() >= TARGET) {
     finished = true;
     $main.style.display = 'none';
