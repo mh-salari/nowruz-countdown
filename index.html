@@ -102,7 +102,7 @@
 
 <script>
 (function() {
-  var TARGET = new Date('2026-03-20T12:49:29Z').getTime(); // TEST. Real: 2026-03-20T14:45:59Z
+  var TARGET = new Date('2026-03-20T12:51:50Z').getTime(); // TEST. Real: 2026-03-20T14:45:59Z
   var $countdown = document.getElementById('countdown');
   var $tahvil = document.getElementById('tahvil');
   var $main = document.getElementById('main');
@@ -273,7 +273,7 @@
 
   function syncTime(cb) {
     var localBefore = Date.now();
-    fetch(window.location.href, { method: 'HEAD', cache: 'no-store' })
+    fetch(window.location.href + '?_=' + Date.now(), { method: 'HEAD', cache: 'no-store' })
       .then(function(r) {
         var localAfter = Date.now();
         var dateHeader = r.headers.get('Date');
