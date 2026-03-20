@@ -11,3 +11,7 @@ var s=document.querySelector('script').textContent.replace('2026-03-20T14:45:59Z
 ```
 
 Note: on Safari/iOS you may still need to click the page once after running this for audio to work.
+
+## Credits
+
+Favicon icon by [Maryam Khoshbakht](https://dribbble.com/shots/23615077-Happy-Nowruz) on Dribbble.
