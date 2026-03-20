@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نوروز ۱۴۰۵ - شمارش معکوس</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #fff;
+    color: #111;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #countdown {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: clamp(3rem, 12vw, 8rem);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    direction: ltr;
+    text-align: center;
+  }
+  #tahvil {
+    margin-top: 1.5rem;
+    font-size: clamp(0.85rem, 2.5vw, 1.1rem);
+    color: #555;
+    direction: rtl;
+    text-align: center;
+  }
+  #audio-prompt {
+    position: fixed;
+    bottom: 2rem;
+    font-size: clamp(0.75rem, 2vw, 0.9rem);
+    color: #999;
+    cursor: pointer;
+    transition: opacity 0.3s;
+  }
+  #audio-prompt.hidden { opacity: 0; pointer-events: none; }
+  #overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: clamp(8rem, 30vw, 20rem);
+    font-weight: 900;
+    color: #111;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    direction: ltr;
+  }
+  #overlay.visible { opacity: 1; }
+  #message {
+    display: none;
+    text-align: center;
+  }
+  #message h1 {
+    font-size: clamp(2.5rem, 10vw, 6rem);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  #message p {
+    font-size: clamp(1rem, 3vw, 1.4rem);
+    color: #555;
+  }
+</style>
+</head>
+<body>
+
+<div id="main">
+  <div id="countdown"></div>
+  <div id="tahvil"></div>
+</div>
+<div id="message">
+  <h1>سال نو مبارک</h1>
+  <p>نوروز ۱۴۰۵</p>
+</div>
+<div id="overlay"></div>
+<div id="audio-prompt">برای فعال‌سازی صدا کلیک کنید</div>
+
+<script>
+(function() {
+  const TARGET = new Date('2026-03-20T14:46:00Z').getTime();
+  const $countdown = document.getElementById('countdown');
+  const $tahvil = document.getElementById('tahvil');
+  const $main = document.getElementById('main');
+  const $message = document.getElementById('message');
+  const $overlay = document.getElementById('overlay');
+  const $audioPrompt = document.getElementById('audio-prompt');
+
+  // --- Audio ---
+  let audioCtx = null;
+  let audioUnlocked = false;
+
+  function unlockAudio() {
+    if (audioUnlocked) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    audioUnlocked = true;
+    $audioPrompt.classList.add('hidden');
+  }
+
+  document.addEventListener('click', unlockAudio, { once: false });
+  document.addEventListener('touchstart', unlockAudio, { once: false });
+
+  function playTick() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 1800;
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.01);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.015);
+  }
+
+  function playCannon() {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    // Low sine burst
+    const osc = audioCtx.createOscillator();
+    const oscGain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(80, t);
+    osc.frequency.exponentialRampToValueAtTime(30, t + 0.5);
+    oscGain.gain.setValueAtTime(1, t);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+    osc.connect(oscGain);
+    oscGain.connect(audioCtx.destination);
+    osc.start(t);
+    osc.stop(t + 0.55);
+    // Noise burst
+    const bufferSize = audioCtx.sampleRate;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const noiseGain = audioCtx.createGain();
+    noiseGain.gain.setValueAtTime(0.6, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    noise.connect(noiseGain);
+    noiseGain.connect(audioCtx.destination);
+    noise.start(t);
+    noise.stop(t + 0.5);
+  }
+
+  function playCelebration() {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const freqs = [523, 659, 784, 1047, 1319, 1568];
+    const delays = [0, 0.1, 0.15, 0.25, 0.4, 0.55];
+    freqs.forEach(function(freq, i) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const start = t + delays[i];
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.2, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 1.5);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(start);
+      osc.stop(start + 1.6);
+    });
+  }
+
+  // --- Tahvil time ---
+  function toPersianDigits(str) {
+    return String(str).replace(/\d/g, function(d) {
+      return String.fromCharCode(0x06F0 + Number(d));
+    });
+  }
+
+  function formatTahvil() {
+    var d = new Date(TARGET);
+    var offset = -d.getTimezoneOffset();
+    var absOff = Math.abs(offset);
+    var offH = Math.floor(absOff / 60);
+    var offM = absOff % 60;
+    var sign = offset >= 0 ? '+' : '-';
+    var hh = String(d.getHours()).padStart(2, '0');
+    var mm = String(d.getMinutes()).padStart(2, '0');
+    var tzLabel = 'UTC' + sign + offH + (offM ? ':' + String(offM).padStart(2, '0') : '');
+    // Try to get a nice tz name
+    try {
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz) tzLabel = tz.replace(/_/g, ' ');
+    } catch(e) {}
+    return 'تحویل سال ۱۴۰۵: ' + toPersianDigits(hh + ':' + mm) + ' به وقت ' + tzLabel;
+  }
+
+  $tahvil.textContent = formatTahvil();
+
+  // --- Countdown ---
+  var finished = false;
+  var lastFinalSec = -1;
+
+  function pad2(n) { return n < 10 ? '0' + n : String(n); }
+
+  function tick() {
+    if (finished) return;
+    var now = Date.now();
+    var diff = TARGET - now;
+
+    if (diff <= 0) {
+      finished = true;
+      $main.style.display = 'none';
+      $overlay.classList.remove('visible');
+      $overlay.textContent = '';
+      $message.style.display = 'block';
+      playCannon();
+      setTimeout(playCelebration, 500);
+      return;
+    }
+
+    var totalSec = Math.ceil(diff / 1000);
+    var days = Math.floor(totalSec / 86400);
+    var hours = Math.floor((totalSec % 86400) / 3600);
+    var minutes = Math.floor((totalSec % 3600) / 60);
+    var seconds = totalSec % 60;
+    $countdown.textContent = pad2(days) + ':' + pad2(hours) + ':' + pad2(minutes) + ':' + pad2(seconds);
+
+    // Final 5 seconds overlay
+    if (totalSec <= 5 && totalSec >= 1 && totalSec !== lastFinalSec) {
+      lastFinalSec = totalSec;
+      $overlay.textContent = totalSec;
+      $overlay.classList.add('visible');
+      playTick();
+      setTimeout(function() { $overlay.classList.remove('visible'); }, 700);
+    }
+  }
+
+  // Initial check — if already past
+  if (Date.now() >= TARGET) {
+    finished = true;
+    $main.style.display = 'none';
+    $message.style.display = 'block';
+    $audioPrompt.classList.add('hidden');
+  } else {
+    tick();
+    setInterval(tick, 200);
+  }
+})();
+</script>
+</body>
+</html>
