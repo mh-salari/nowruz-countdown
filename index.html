@@ -362,7 +362,7 @@
     } else {
       tick();
       setInterval(tick, 200);
-      setInterval(function() { if (!finished) syncTime(); }, 30000);
+      setInterval(function() { if (!finished) syncTime(); }, 10000);
     }
   }
   syncTime(start);
