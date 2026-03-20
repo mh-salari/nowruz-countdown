@@ -102,7 +102,7 @@
 
 <script>
 (function() {
-  var TARGET = new Date('2026-03-20T12:39:22Z').getTime(); // TEST. Real: 2026-03-20T14:45:59Z
+  var TARGET = new Date('2026-03-20T12:43:46Z').getTime(); // TEST. Real: 2026-03-20T14:45:59Z
   var $countdown = document.getElementById('countdown');
   var $tahvil = document.getElementById('tahvil');
   var $main = document.getElementById('main');
@@ -273,17 +273,17 @@
 
   function syncTime(cb) {
     var localBefore = Date.now();
-    fetch('https://worldtimeapi.org/api/timezone/Etc/UTC')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
+    fetch(window.location.href, { method: 'HEAD', cache: 'no-store' })
+      .then(function(r) {
         var localAfter = Date.now();
-        var roundTrip = localAfter - localBefore;
-        var serverTime = new Date(data.utc_datetime).getTime();
-        timeOffset = serverTime - localBefore - Math.round(roundTrip / 2);
-        synced = true;
-        if (cb) cb();
+        var dateHeader = r.headers.get('Date');
+        if (dateHeader) {
+          var roundTrip = localAfter - localBefore;
+          var serverTime = new Date(dateHeader).getTime();
+          timeOffset = serverTime - localBefore - Math.round(roundTrip / 2);
+        }
       })
-      .catch(function() { synced = true; if (cb) cb(); });
+      .finally(function() { synced = true; if (cb) cb(); });
   }
 
   function now() { return Date.now() + timeOffset; }
