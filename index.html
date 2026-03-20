@@ -85,13 +85,14 @@
 <div id="message">
   <h1>سال نو مبارک</h1>
   <p>نوروز ۱۴۰۵</p>
+  <p id="tahvil-time"></p>
 </div>
 <div id="overlay"></div>
 <div id="audio-prompt">برای فعال‌سازی صدا کلیک کنید</div>
 
 <script>
 (function() {
-  var TARGET = new Date('2026-03-20T12:16:32Z').getTime(); // TEST: 2.5min from now. Real: 2026-03-20T14:46:00Z
+  var TARGET = new Date('2026-03-20T12:22:03Z').getTime(); // TEST: 2.5min from now. Real: 2026-03-20T14:46:00Z
   var $countdown = document.getElementById('countdown');
   var $tahvil = document.getElementById('tahvil');
   var $main = document.getElementById('main');
@@ -108,6 +109,7 @@
   // --- Audio ---
   var audioUnlocked = false;
   var cannonSound = new Audio('sounds/cannon.mp3');
+  var happyNewYearSound = new Audio('sounds/happy-new-year.mp3');
   var celebrationSound = new Audio('sounds/celebration.mp3');
   var numberFiles = {
     5: new Audio('sounds/ms/5.mp3'),
@@ -118,12 +120,13 @@
   };
 
   cannonSound.preload = 'auto';
+  happyNewYearSound.preload = 'auto';
   celebrationSound.preload = 'auto';
   for (var k in numberFiles) numberFiles[k].preload = 'auto';
 
   function unlockAudio() {
     if (audioUnlocked) return;
-    var allSounds = [cannonSound, celebrationSound];
+    var allSounds = [cannonSound, happyNewYearSound, celebrationSound];
     for (var k in numberFiles) allSounds.push(numberFiles[k]);
     allSounds.forEach(function(s) {
       s.play().then(function() { s.pause(); s.currentTime = 0; }).catch(function() {});
@@ -174,21 +177,32 @@
 
   function pad2(n) { return n < 10 ? '0' + n : String(n); }
 
+  function showTahvilTime() {
+    document.getElementById('tahvil-time').textContent = formatTahvil();
+  }
+
   function celebrate() {
     $main.style.display = 'none';
     $overlay.classList.remove('visible');
     $overlay.textContent = '';
     $message.style.display = 'block';
+    showTahvilTime();
     // Cannon 3 times
     playCannon();
     setTimeout(playCannon, 600);
     setTimeout(playCannon, 1200);
-    // Wait 1.5s then play celebration MP3
+    // Happy new year voice after cannons
+    setTimeout(function() {
+      if (!audioUnlocked) return;
+      happyNewYearSound.currentTime = 0;
+      happyNewYearSound.play().catch(function() {});
+    }, 1500);
+    // Celebration music after happy new year voice
     setTimeout(function() {
       if (!audioUnlocked) return;
       celebrationSound.currentTime = 0;
       celebrationSound.play().catch(function() {});
-    }, 2000);
+    }, 3500);
   }
 
   function tick() {
@@ -225,6 +239,7 @@
     finished = true;
     $main.style.display = 'none';
     $message.style.display = 'block';
+    showTahvilTime();
     $audioPrompt.classList.add('hidden');
   } else {
     tick();
